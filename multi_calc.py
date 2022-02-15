@@ -7,7 +7,7 @@ class Figure(Frame):
         super().__init__(root)
         self._name = name
         self._canvas = Canvas(self, width=500, height=500, bg='white')
-        self._canvas.pack()
+        self._canvas.pack(side=TOP)
 
     def area(self):
         raise NotImplementedError('Нереализованный метод!')
@@ -22,16 +22,41 @@ class Figure(Frame):
 class Rectangle(Figure):
     def __init__(self, root, name: str):
         super().__init__(root, name=name)
-        self._combo = ttk.Combobox(self, values=Rectangle.what_calc(),
+        self.__calc_frame = Frame(self)
+        self._combo = ttk.Combobox(self.__calc_frame, values=Rectangle.what_calc(),
                                    state='readonly')
-        self._combo.pack(side=LEFT, padx=5, pady=10)
+        self._combo.pack(side=LEFT, padx=10, pady=10)
         self._combo.current(0)
+        self.__a_frame = Frame(self.__calc_frame)
+        self.__a_lbl = Label(self.__a_frame, text='a: ')
+        self.__a_lbl.pack(side=LEFT)
+        self.__a_entry = Entry(self.__a_frame)
+        self.__a_entry.pack(side=LEFT)
+        self.__a_frame.pack(side=TOP, pady=10)
+        self.__b_frame = Frame(self.__calc_frame)
+        self.__b_lbl = Label(self.__b_frame, text='b: ')
+        self.__b_lbl.pack(side=LEFT)
+        self.__b_entry = Entry(self.__b_frame)
+        self.__b_entry.pack(side=LEFT)
+        self.__b_frame.pack(side=TOP, pady=10)
+        self.__calc_frame.pack(side=TOP, fill='x')
+        self.__sep = ttk.Separator(self, orient='horizontal')
+        self.__sep.pack(fill='x')
+        self.__result_frame = Frame(self)
+        self.__result_lbl = Label(self.__result_frame, text='Результат: ', font='Arial 20')
+        self.__result_lbl.pack(side=LEFT)
+        self.__result_val_lbl = Label(self.__result_frame, font='Arial 20')
+        self.__result_val_lbl.pack(side=LEFT)
+        self.__result_frame.pack(side=TOP)
 
     @staticmethod
     def what_calc() -> tuple:
         return 'Площадь', 'Периметр'
 
     def area(self):
+        pass
+
+    def perimetr(self):
         pass
 
     def draw(self):

@@ -8,8 +8,27 @@ class Figure(Frame):
         self._name = name
         self._canvas = Canvas(self, width=500, height=500, bg='white')
         self._canvas.pack(side=TOP)
+        self.__calc_frame = Frame(self)
+        self._combo = ttk.Combobox(self.__calc_frame, state='readonly')
+        self._combo.pack(side=LEFT, padx=10, pady=10)
+        # self._combo.current(0)
+        self._params_frame = Frame(self.__calc_frame)
+        self._params_frame.pack(side=LEFT)
+        self.__calc_frame.pack(side=TOP, fill='x')
+        self.__sep = ttk.Separator(self, orient='horizontal')
+        self.__sep.pack(fill='x')
+        self.__result_frame = Frame(self)
+        self.__result_lbl = Label(self.__result_frame, text='Результат: ', font='Arial 20')
+        self.__result_lbl.pack(side=LEFT)
+        self._result_val_lbl = Label(self.__result_frame, font='Arial 20')
+        self._result_val_lbl.pack(side=LEFT)
+        self.__result_frame.pack(side=TOP)
+        self._combo.bind("<<ComboboxSelected>>", self.solve_selected)
 
     def area(self):
+        raise NotImplementedError('Нереализованный метод!')
+
+    def perimetr(self):
         raise NotImplementedError('Нереализованный метод!')
 
     def get_name(self):
@@ -18,36 +37,37 @@ class Figure(Frame):
     def draw(self):
         raise NotImplementedError('Нереализованный метод!')
 
+    def input_changed(self, name, index, mode):
+        raise NotImplementedError('Нереализованный метод!')
+
+    def solve_selected(self, event):
+        raise NotImplementedError('Нереализованный метод!')
+
 
 class Rectangle(Figure):
     def __init__(self, root, name: str):
         super().__init__(root, name=name)
-        self.__calc_frame = Frame(self)
-        self._combo = ttk.Combobox(self.__calc_frame, values=Rectangle.what_calc(),
-                                   state='readonly')
-        self._combo.pack(side=LEFT, padx=10, pady=10)
-        self._combo.current(0)
-        self.__a_frame = Frame(self.__calc_frame)
+        self.__a_frame = Frame(self._params_frame)
         self.__a_lbl = Label(self.__a_frame, text='a: ')
         self.__a_lbl.pack(side=LEFT)
-        self.__a_entry = Entry(self.__a_frame)
+        self.__a_val = StringVar()
+        self.__a_entry = Entry(self.__a_frame, textvariable=self.__a_val)
+
         self.__a_entry.pack(side=LEFT)
         self.__a_frame.pack(side=TOP, pady=10)
-        self.__b_frame = Frame(self.__calc_frame)
+        self.__b_frame = Frame(self._params_frame)
         self.__b_lbl = Label(self.__b_frame, text='b: ')
         self.__b_lbl.pack(side=LEFT)
-        self.__b_entry = Entry(self.__b_frame)
+        self.__b_val = StringVar()
+        self.__b_entry = Entry(self.__b_frame, textvariable=self.__b_val)
         self.__b_entry.pack(side=LEFT)
         self.__b_frame.pack(side=TOP, pady=10)
-        self.__calc_frame.pack(side=TOP, fill='x')
-        self.__sep = ttk.Separator(self, orient='horizontal')
-        self.__sep.pack(fill='x')
-        self.__result_frame = Frame(self)
-        self.__result_lbl = Label(self.__result_frame, text='Результат: ', font='Arial 20')
-        self.__result_lbl.pack(side=LEFT)
-        self.__result_val_lbl = Label(self.__result_frame, font='Arial 20')
-        self.__result_val_lbl.pack(side=LEFT)
-        self.__result_frame.pack(side=TOP)
+
+        calc_variants = self.__class__.what_calc()
+        self._combo.configure(values=calc_variants)
+        self._combo.current(0)
+        self.__a_val.trace_add('write', self.input_changed)
+        self.__b_val.trace_add('write', self.input_changed)
 
     @staticmethod
     def what_calc() -> tuple:
@@ -60,6 +80,27 @@ class Rectangle(Figure):
         pass
 
     def draw(self):
+        canv_w = self._canvas.winfo_width()
+        canv_h = self._canvas.winfo_height()
+        self._canvas.create_rectangle(100, 100, 150, 150)
+
+    def input_changed(self, name, index, mode):
+        try:
+            a_val = float(self.__a_val.get())
+            b_val = float(self.__b_val.get())
+        except:
+            return
+        if a_val != 0.0 and b_val != 0.0:
+            what_calc = self._combo.get()
+            if  what_calc == 'Площадь':
+                area = a_val * b_val
+                self._result_val_lbl['text'] = str(area)
+            elif what_calc == 'Периметр':
+                p = (a_val + b_val) * 2
+                self._result_val_lbl['text'] = str(p)
+            self.draw()
+
+    def solve_selected(self, event):
         pass
 
 

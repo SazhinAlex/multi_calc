@@ -1,29 +1,38 @@
-from tkinter import tk
+import tkinter as tk
 from tkinter import ttk
 
 
-class Figure(tk.Frame):
+class Figure:
     def __init__(self, root, name: str):
         super().__init__(root)
         self._name = name
+        self.__choices = []
+        for choice in self.__class__.what_calc():
+            data = {
+                'name': choice,
+                'frame': None,
+                'inputs': None
+            }
+            
+            self._choices.append(data)
 
-
-    def area(self):
-        raise NotImplementedError('Нереализованный метод!')
-
-    def perimetr(self):
-        raise NotImplementedError('Нереализованный метод!')
-
-    def get_name(self):
+    def __str__(self) -> str:
         return self._name
 
-    def draw(self):
+    @staticmethod
+    def what_calc() -> tuple:
+        return ('Площадь', 'Периметр')
+
+    def get_choices(self) -> list:
+        return self.__choices
+
+    def area(self, var, index, mode):
         raise NotImplementedError('Нереализованный метод!')
 
-    def input_changed(self, name, index, mode):
+    def perimetr(self, var, index, mode):
         raise NotImplementedError('Нереализованный метод!')
 
-    def solve_selected(self, event):
+    def draw(self, canvas: tk.Canvas, *args):
         raise NotImplementedError('Нереализованный метод!')
 
 
@@ -52,49 +61,39 @@ class Rectangle(Figure):
         self.__a_val.trace_add('write', self.input_changed)
         self.__b_val.trace_add('write', self.input_changed)
 
-    @staticmethod
-    def what_calc() -> tuple:
-        return 'Площадь', 'Периметр'
 
-    def area(self):
-        pass
+    def get_choices(self) -> list:
+        common_choices = super().get_choices()
+        for choice in common_choices:
+            if choice['name'] == 'Периметр':
+                choice['inputs'] = (
+                    {'a': tk.StringVar('write', self.perimetr, name='a')}, 
+                    {'b': tk.StringVar('write', self.perimetr, name='b')}
+                    )
+            elif choice['name'] == 'Площадь':
+                choice['inputs'] = (
+                    {'a': tk.StringVar('write', self.area, name='a')}, 
+                    {'b': tk.StringVar('write', self.area, name='b')}
+                    )
 
-    def perimetr(self):
-        pass
+        return common_choices
+
+    def area(self, var, index, mode):
+        return super().area(var, index, mode)
+
+    def perimetr(self, var, index, mode):
+        return super().perimetr(var, index, mode)
 
     # На вход параметры рисуемой фигуры. self.draw(a, b) a - длина стороны а; b - длина стороны b
-    def draw(self, *args):
+    def draw(self, canvas: tk.Canvas, *args):
         canv_w = self._canvas.winfo_width()
         canv_h = self._canvas.winfo_height()
         self._canvas.create_rectangle(100, 100, 400, 400)
-
-    def input_changed(self, name, index, mode):
-        try:
-            a_val = float(self.__a_val.get())
-            b_val = float(self.__b_val.get())
-        except:
-            return
-        if a_val != 0.0 and b_val != 0.0:
-            what_calc = self._combo.get()
-            if  what_calc == 'Площадь':
-                area = a_val * b_val
-                self._result_val_lbl['text'] = str(area)
-            elif what_calc == 'Периметр':
-                p = (a_val + b_val) * 2
-                self._result_val_lbl['text'] = str(p)
-            self.draw(a_val, b_val)
-
-    def solve_selected(self, event):
-        pass
 
 
 class Square(Figure):
     def __init__(self, root, name: str):
         super().__init__(root, name=name)
-
-    @staticmethod
-    def what_calc() -> tuple:
-        return 'Площадь', 'Периметр'
 
     def area(self):
         pass
@@ -195,7 +194,7 @@ class Calculator(metaclass=MetaCalculator):
         return self.__notebook
 
 
-    def add_calculable_feature(self, features: tuple):
+    def add_features(self, features: tuple):
         for feature in features:
             feature_dict = {
                 'readable_name': None,
@@ -203,13 +202,7 @@ class Calculator(metaclass=MetaCalculator):
                 'inputs_frame': None,
                 'feature_object': None
             }
-            choices_list = []
-            for choice in feature.__class__.what_calc():
-                choice_dict = {
-                    'choice': None,
-                    'choice_frame': None,
-                    'inputs': []
-                }
+
             readable_name = feature.get_name()
 
 
@@ -217,8 +210,8 @@ class Calculator(metaclass=MetaCalculator):
 if __name__ == '__main__':
     calc_app = Calculator()
     parent_notebook = calc_app.get_notebook()
-    figs = (
+    features = (
         Rectangle(parent_notebook, 'Прямоугольник'),
     )
-    calc_app.add_calculable_figures(figs)
+    calc_app.add_features(features)
     calc_app.run()

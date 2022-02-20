@@ -1,20 +1,21 @@
+from audioop import add
 import tkinter as tk
 from tkinter import ttk
 
 
 class Figure:
-    def __init__(self, root, name: str):
-        super().__init__(root)
+    def __init__(self, name: str):
         self._name = name
-        self.__choices = []
+        self._choices = {}
         for choice in self.__class__.what_calc():
-            data = {
-                'name': choice,
-                'frame': None,
-                'inputs': None
-            }
-            
-            self._choices.append(data)
+            fn = self.area if choice == 'Площадь' else self.perimetr
+            self._choices[choice] = {
+                'frames': {'inputs_frame': None, 'parent_frame': None}, 
+                'inputs': None, 
+                'canvas': None, 
+                'output': None, 
+                'solve_fn': fn
+                }
 
     def __str__(self) -> str:
         return self._name
@@ -24,7 +25,7 @@ class Figure:
         return ('Площадь', 'Периметр')
 
     def get_choices(self) -> list:
-        return self.__choices
+        return self._choices
 
     def area(self, var, index, mode):
         raise NotImplementedError('Нереализованный метод!')
@@ -33,62 +34,54 @@ class Figure:
         raise NotImplementedError('Нереализованный метод!')
 
     def draw(self, canvas: tk.Canvas, *args):
+        raise NotImplementedError('Нереализованный метод!')
+
+    def solve_selected(self):
         raise NotImplementedError('Нереализованный метод!')
 
 
 class Rectangle(Figure):
-    def __init__(self, root, name: str):
-        super().__init__(root, name=name)
-        self.__a_frame = tk.Frame(self._params_frame)
-        self.__a_lbl = tk.Label(self.__a_frame, text='a: ')
-        self.__a_lbl.pack(side=tk.LEFT)
-        self.__a_val = tk.StringVar()
-        self.__a_entry = tk.Entry(self.__a_frame, textvariable=self.__a_val)
+    def __init__(self, name: str):
+        super().__init__(name)
+        for choice in self._choices:
+            if choice == 'Периметр':
+                a_sv = tk.DoubleVar(name='a')
+                b_sv = tk.DoubleVar(name='b')
+                self._choices[choice]['inputs'] = ({'a': [a_sv, ]}, {'b': [b_sv, ]})
+            elif choice == 'Площадь':
+                a_sv = tk.DoubleVar(name='a')
+                b_sv = tk.DoubleVar(name='b')
+                self._choices[choice]['inputs'] = ({'a': [a_sv, ]}, {'b': [b_sv, ]})
 
-        self.__a_entry.pack(side=tk.LEFT)
-        self.__a_frame.pack(side=tk.TOP, pady=10)
-        self.__b_frame = tk.Frame(self._params_frame)
-        self.__b_lbl = tk.Label(self.__b_frame, text='b: ')
-        self.__b_lbl.pack(side=tk.LEFT)
-        self.__b_val = tk.StringVar()
-        self.__b_entry = tk.Entry(self.__b_frame, textvariable=self.__b_val)
-        self.__b_entry.pack(side=tk.LEFT)
-        self.__b_frame.pack(side=tk.TOP, pady=10)
-
-        calc_variants = self.__class__.what_calc()
-        self._combo.configure(values=calc_variants)
-        self._combo.current(0)
-        self.__a_val.trace_add('write', self.input_changed)
-        self.__b_val.trace_add('write', self.input_changed)
-
-
-    def get_choices(self) -> list:
-        common_choices = super().get_choices()
-        for choice in common_choices:
-            if choice['name'] == 'Периметр':
-                choice['inputs'] = (
-                    {'a': tk.StringVar('write', self.perimetr, name='a')}, 
-                    {'b': tk.StringVar('write', self.perimetr, name='b')}
-                    )
-            elif choice['name'] == 'Площадь':
-                choice['inputs'] = (
-                    {'a': tk.StringVar('write', self.area, name='a')}, 
-                    {'b': tk.StringVar('write', self.area, name='b')}
-                    )
-
-        return common_choices
 
     def area(self, var, index, mode):
-        return super().area(var, index, mode)
+        print('Площаль')
 
     def perimetr(self, var, index, mode):
-        return super().perimetr(var, index, mode)
+        print('Периметр')
 
     # На вход параметры рисуемой фигуры. self.draw(a, b) a - длина стороны а; b - длина стороны b
     def draw(self, canvas: tk.Canvas, *args):
-        canv_w = self._canvas.winfo_width()
-        canv_h = self._canvas.winfo_height()
-        self._canvas.create_rectangle(100, 100, 400, 400)
+        canv_w = canvas.winfo_width()
+        canv_h = canvas.winfo_height()
+        canvas.create_rectangle(100, 100, 400, 400)
+
+    def solve_selected(self, event):
+        selected = event.widget.get()
+        for choice in self._choices:
+            frame = self._choices[choice]['frames']['inputs_frame']
+            inputs = self._choices[choice]['inputs']
+            solve_fn = self._choices[choice]['solve_fn']
+            if choice == selected:
+                for in_dict in inputs:
+                    for in_lbl in in_dict:
+                        in_dict[in_lbl][0].trace_add('write', solve_fn)
+                frame.pack()
+            else:
+                for in_dict in inputs:
+                    for in_lbl in in_dict:
+                        in_dict[in_lbl][0].trace_info().clear()
+                frame.pack_forget()
 
 
 class Square(Figure):
@@ -148,7 +141,7 @@ class Cube(Figure):
 
 
 # Калькулятор может быть только один. На данный момент...
-# Паттерн синглтон через метаклассы
+# Паттерн - синглтон через метаклассы
 class MetaCalculator(type):
     _instances = {}
 
@@ -163,29 +156,10 @@ class Calculator(metaclass=MetaCalculator):
     def __init__(self):
         self.__features = []
         self.__root = tk.Tk()
-        self.__root.geometry('500x700')
+        # self.__root.geometry('500x700')
         self.__root.resizable(False, False)
         self.__notebook = ttk.Notebook(self.__root)
         self.__notebook.pack()
-
-        self._canvas = tk.Canvas(self, width=500, height=500, bg='white')
-        self._canvas.pack(side=tk.TOP)
-        self.__calc_frame = tk.Frame(self)
-        self._combo = ttk.Combobox(self.__calc_frame, state='readonly')
-        self._combo.pack(side=tk.LEFT, padx=10, pady=10)
-        # self._combo.current(0)
-        self._params_frame = tk.Frame(self.__calc_frame)
-        self._params_frame.pack(side=tk.LEFT)
-        self.__calc_frame.pack(side=tk.TOP, fill='x')
-        self.__sep = ttk.Separator(self, orient='horizontal')
-        self.__sep.pack(fill='x')
-        self.__result_frame = tk.Frame(self)
-        self.__result_lbl = tk.Label(self.__result_frame, text='Результат: ', font='Arial 20')
-        self.__result_lbl.pack(side=tk.LEFT)
-        self._result_val_lbl = tk.Label(self.__result_frame, font='Arial 20')
-        self._result_val_lbl.pack(side=tk.LEFT)
-        self.__result_frame.pack(side=tk.TOP)
-        self._combo.bind("<<ComboboxSelected>>", self.solve_selected)
 
     def run(self):
         self.__root.mainloop()
@@ -196,22 +170,56 @@ class Calculator(metaclass=MetaCalculator):
 
     def add_features(self, features: tuple):
         for feature in features:
-            feature_dict = {
-                'readable_name': None,
-                'choices': None,
-                'inputs_frame': None,
-                'feature_object': None
-            }
+            choices = feature.get_choices()
+            feature_frame = tk.Frame(self.__notebook)
+            canvas = tk.Canvas(feature_frame, width=500, height=500, bg='white')
+            canvas.pack(side=tk.TOP)
+            calc_frame = tk.Frame(feature_frame)
+            combo = ttk.Combobox(calc_frame, state='readonly', values=feature.__class__.what_calc())
+            combo.pack(side=tk.LEFT, padx=10, pady=10)
+            combo.current(0)
+            blank_frame = tk.Frame(calc_frame)
+            blank_frame.pack(side=tk.TOP)
+            
+            calc_frame.pack(side=tk.TOP, fill='x')
+            sep = ttk.Separator(feature_frame, orient='horizontal')
+            sep.pack(fill='x')
+            result_frame = tk.Frame(feature_frame)
+            result_lbl = tk.Label(result_frame, text='Результат: ', font='Arial 20')
+            result_lbl.pack(side=tk.LEFT)
+            result_val_lbl = tk.Label(result_frame, font='Arial 20')
+            result_val_lbl.pack(side=tk.LEFT)
+            result_frame.pack(side=tk.TOP)
+            combo.bind("<<ComboboxSelected>>", feature.solve_selected)
+            
+            for choice in choices:
+                params_frame = tk.Frame(blank_frame)
+                # params_frame.pack(side=tk.LEFT)
+                choices[choice]['frames']['inputs_frame'] = params_frame
+                choices[choice]['frames']['parent_frame'] = blank_frame
+                choices[choice]['canvas'] = canvas
+                choices[choice]['output'] = result_val_lbl
 
-            readable_name = feature.get_name()
+                inputs = choices[choice]['inputs']
+                for input in inputs:
+                    for input_lbl in input:
+                        sv = input[input_lbl][0]
+                        in_frame = tk.Frame(params_frame)
+                        in_lbl = tk.Label(in_frame, text=f'{input_lbl}: ')
+                        in_lbl.pack(side=tk.LEFT)
+                        in_entry = tk.Entry(in_frame, textvariable=sv)
+                        input[input_lbl].append(in_entry)
+                        in_entry.pack(side=tk.LEFT)
+                        in_frame.pack(side=tk.TOP, pady=10)
 
-
+            self.__notebook.add(feature_frame, text=str(feature))
+            self.__features.append(feature)
+            combo.event_generate("<<ComboboxSelected>>")
 
 if __name__ == '__main__':
     calc_app = Calculator()
-    parent_notebook = calc_app.get_notebook()
     features = (
-        Rectangle(parent_notebook, 'Прямоугольник'),
+        Rectangle('Прямоугольник'),
     )
     calc_app.add_features(features)
     calc_app.run()

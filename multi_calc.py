@@ -45,26 +45,58 @@ class Rectangle(Figure):
         super().__init__(name)
         for choice in self._choices:
             if choice == 'Периметр':
-                a_sv = tk.DoubleVar(name='a')
-                b_sv = tk.DoubleVar(name='b')
+                a_sv = tk.DoubleVar(name='a_perimetr')
+                b_sv = tk.DoubleVar(name='b_perimetr')
                 self._choices[choice]['inputs'] = ({'a': [a_sv, ]}, {'b': [b_sv, ]})
             elif choice == 'Площадь':
-                a_sv = tk.DoubleVar(name='a')
-                b_sv = tk.DoubleVar(name='b')
+                a_sv = tk.DoubleVar(name='a_area')
+                b_sv = tk.DoubleVar(name='b_area')
                 self._choices[choice]['inputs'] = ({'a': [a_sv, ]}, {'b': [b_sv, ]})
 
 
     def area(self, var, index, mode):
-        print('Площаль')
+        try:
+            a_val = self._choices['Площадь']['inputs'][0]['a'][0].get()
+            b_val = self._choices['Площадь']['inputs'][1]['b'][0].get()
+        except:
+            return
+        area = a_val * b_val
+        self._choices['Площадь']['output']['text'] = area
+        canvas = self._choices['Площадь']['canvas']
+        self.draw(canvas, a_val, b_val)
 
     def perimetr(self, var, index, mode):
-        print('Периметр')
+        try:
+            a_val = self._choices['Периметр']['inputs'][0]['a'][0].get()
+            b_val = self._choices['Периметр']['inputs'][1]['b'][0].get()
+        except:
+            return
+        perimetr = (a_val + b_val) * 2
+        self._choices['Периметр']['output']['text'] = perimetr
+        canvas = self._choices['Периметр']['canvas']
+        self.draw(canvas, a_val, b_val)
 
     # На вход параметры рисуемой фигуры. self.draw(a, b) a - длина стороны а; b - длина стороны b
     def draw(self, canvas: tk.Canvas, *args):
         canv_w = canvas.winfo_width()
         canv_h = canvas.winfo_height()
-        canvas.create_rectangle(100, 100, 400, 400)
+        x1 = 100
+        y1 = 100
+        x2 = 400
+        y2 = 400
+
+        a_x = int((x2 + x1) * 0.5)
+        a_y = y2 + 10
+        b_x = x2 + 10
+        b_y = int((y2 + y1) * 0.5)
+
+        if len(args) < 2 or args[0] <= 0.0 or args[1] <= 0.0:
+            canvas.create_rectangle(x1, y1, x2, y2)
+            
+            canvas.create_text(a_x, a_y, text='a', fill='black', font=('Helvetica 15 bold'))
+            canvas.create_text(b_x, b_y, text='b', fill='black', font=('Helvetica 15 bold'))
+        else:
+            pass
 
     def solve_selected(self, event):
         selected = event.widget.get()
@@ -72,6 +104,7 @@ class Rectangle(Figure):
             frame = self._choices[choice]['frames']['inputs_frame']
             inputs = self._choices[choice]['inputs']
             solve_fn = self._choices[choice]['solve_fn']
+
             if choice == selected:
                 for in_dict in inputs:
                     for in_lbl in in_dict:
@@ -80,7 +113,12 @@ class Rectangle(Figure):
             else:
                 for in_dict in inputs:
                     for in_lbl in in_dict:
-                        in_dict[in_lbl][0].trace_info().clear()
+                        sv = in_dict[in_lbl][0]
+                        trace_info = sv.trace_info()
+                        for event_type, fn_name in trace_info:
+                            if 'write' in event_type:
+                                sv.trace_remove('write', fn_name)
+    
                 frame.pack_forget()
 
 

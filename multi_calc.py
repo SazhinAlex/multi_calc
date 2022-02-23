@@ -36,8 +36,28 @@ class Figure:
     def draw(self, canvas: tk.Canvas, *args):
         raise NotImplementedError('Нереализованный метод!')
 
-    def solve_selected(self):
-        raise NotImplementedError('Нереализованный метод!')
+    def solve_selected(self, event):
+        selected = event.widget.get()
+        for choice in self._choices:
+            frame = self._choices[choice]['frames']['inputs_frame']
+            inputs = self._choices[choice]['inputs']
+            solve_fn = self._choices[choice]['solve_fn']
+
+            if choice == selected:
+                for in_dict in inputs:
+                    for in_lbl in in_dict:
+                        in_dict[in_lbl][0].trace_add('write', solve_fn)
+                frame.pack()
+            else:
+                for in_dict in inputs:
+                    for in_lbl in in_dict:
+                        sv = in_dict[in_lbl][0]
+                        trace_info = sv.trace_info()
+                        for event_type, fn_name in trace_info:
+                            if 'write' in event_type:
+                                sv.trace_remove('write', fn_name)
+    
+                frame.pack_forget()
 
 
 class Rectangle(Figure):
@@ -80,72 +100,89 @@ class Rectangle(Figure):
     def draw(self, canvas: tk.Canvas, *args):
         canv_w = canvas.winfo_width()
         canv_h = canvas.winfo_height()
-        x1 = 100
-        y1 = 100
-        x2 = 400
-        y2 = 400
+        x1 = int(canv_w * 0.15)
+        y1 = int(canv_h * 0.15)
+        x2 = int(canv_w * 0.85)
+        y2 = int(canv_h * 0.85)
+
+        if len(args) >= 2 and args[0] > 0.0 and args[1] > 0.0:
+            max_val = max(args)
+            a_coeff = args[0] / max_val
+            b_coeff = args[1] / max_val
+            x2 = int(x2 * a_coeff)
+            y2 = int(y2 * b_coeff)
 
         a_x = int((x2 + x1) * 0.5)
         a_y = y2 + 10
         b_x = x2 + 10
         b_y = int((y2 + y1) * 0.5)
 
-        if len(args) < 2 or args[0] <= 0.0 or args[1] <= 0.0:
-            canvas.create_rectangle(x1, y1, x2, y2)
-            
-            canvas.create_text(a_x, a_y, text='a', fill='black', font=('Helvetica 15 bold'))
-            canvas.create_text(b_x, b_y, text='b', fill='black', font=('Helvetica 15 bold'))
-        else:
-            pass
-
-    def solve_selected(self, event):
-        selected = event.widget.get()
-        for choice in self._choices:
-            frame = self._choices[choice]['frames']['inputs_frame']
-            inputs = self._choices[choice]['inputs']
-            solve_fn = self._choices[choice]['solve_fn']
-
-            if choice == selected:
-                for in_dict in inputs:
-                    for in_lbl in in_dict:
-                        in_dict[in_lbl][0].trace_add('write', solve_fn)
-                frame.pack()
-            else:
-                for in_dict in inputs:
-                    for in_lbl in in_dict:
-                        sv = in_dict[in_lbl][0]
-                        trace_info = sv.trace_info()
-                        for event_type, fn_name in trace_info:
-                            if 'write' in event_type:
-                                sv.trace_remove('write', fn_name)
-    
-                frame.pack_forget()
+        canvas.delete('all')
+        canvas.create_rectangle(x1, y1, x2, y2)
+        canvas.create_text(a_x, a_y, text='a', fill='black', font=('Helvetica 15 bold'))
+        canvas.create_text(b_x, b_y, text='b', fill='black', font=('Helvetica 15 bold'))
 
 
 class Square(Figure):
-    def __init__(self, root, name: str):
-        super().__init__(root, name=name)
+    def __init__(self, name: str):
+        super().__init__(name)
+        for choice in self._choices:
+            if choice == 'Периметр':
+                a_sv = tk.DoubleVar(name='a_perimetr')
+                self._choices[choice]['inputs'] = ({'a': [a_sv, ]}, )
+            elif choice == 'Площадь':
+                a_sv = tk.DoubleVar(name='a_area')
+                self._choices[choice]['inputs'] = ({'a': [a_sv, ]}, )
 
-    def area(self):
-        pass
+    def area(self, var, index, mode):
+        try:
+            a_val = self._choices['Площадь']['inputs'][0]['a'][0].get()
+        except:
+            return
+        area = a_val ** 2
+        self._choices['Площадь']['output']['text'] = area
+        canvas = self._choices['Площадь']['canvas']
+        self.draw(canvas, a_val)
 
-    def draw(self):
-        pass
+    def perimetr(self, var, index, mode):
+        try:
+            a_val = self._choices['Периметр']['inputs'][0]['a'][0].get()
+        except:
+            return
+        perimetr = a_val * 4
+        self._choices['Периметр']['output']['text'] = perimetr
+        canvas = self._choices['Периметр']['canvas']
+        self.draw(canvas, a_val)
+
+    def draw(self, canvas: tk.Canvas, *args):
+        canv_w = canvas.winfo_width()
+        canv_h = canvas.winfo_height()
+        min_l = min((canv_w, canv_h))
+        x1 = int(min_l * 0.15)
+        y1 = int(min_l * 0.15)
+        x2 = int(min_l * 0.85)
+        y2 = int(min_l * 0.85)
+
+        a_x = int((x2 + x1) * 0.5)
+        a_y = y2 + 10
+
+        canvas.delete('all')
+        canvas.create_rectangle(x1, y1, x2, y2)
+        canvas.create_text(a_x, a_y, text='a', fill='black', font=('Helvetica 15 bold'))
 
 
 class Triangle(Figure):
-    def __init__(self, root, name: str):
-        super().__init__(root, name=name)
+    def __init__(self, name: str):
+        super().__init__(name)
 
-    @staticmethod
-    def what_calc() -> tuple:
-        return 'Площадь', 'Периметр'
+    def area(self, var, index, mode):
+        return super().area(var, index, mode)
 
-    def area(self):
-        pass
+    def perimetr(self, var, index, mode):
+        return super().perimetr(var, index, mode)
 
-    def draw(self):
-        pass
+    def draw(self, canvas: tk.Canvas, *args):
+        return super().draw(canvas, *args)
 
 
 class Circle(Figure):
@@ -258,6 +295,7 @@ if __name__ == '__main__':
     calc_app = Calculator()
     features = (
         Rectangle('Прямоугольник'),
+        Square('Квадрат')
     )
     calc_app.add_features(features)
     calc_app.run()
